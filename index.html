@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Video Chat - Trang Chủ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Video Call Section -->
+    <div class="col-lg-8">
+        <!-- Video Call Card -->
+        <div class="card fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-video me-2"></i>Video Call
+                </h4>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2" id="connectionStatus">
+                        <i class="fas fa-circle me-1"></i>Online
+                    </span>
+                    <span class="badge bg-primary">
+                        <i class="fas fa-users me-1"></i>
+                        <span id="onlineCount">{{ users|length + 1 if users else 1 }}</span> online
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Video Containers -->
+                <div class="row">
+                    <!-- Local Video -->
+                    <div class="col-md-6 mb-3">
+                        <div class="video-container">
+                            <div class="video-label">
+                                <i class="fas fa-user me-1"></i>Bạn
+                            </div>
+                            <video id="localVideo" autoplay muted playsinline></video>
+                            <div class="video-placeholder">
+                                <i class="fas fa-camera-slash fa-2x mb-2"></i>
+                                <div>Camera đang tắt</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Remote Video -->
+                    <div class="col-md-6 mb-3">
+                        <div class="video-container">
+                            <div class="video-label">
+                                <i class="fas fa-user-friends me-1"></i>Người gọi
+                            </div>
+                            <video id="remoteVideo" autoplay playsinline></video>
+                            <div class="video-placeholder">
+                                <i class="fas fa-phone fa-2x mb-2"></i>
+                                <div>Đang chờ kết nối...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call Timer -->
+                <div id="callTimer" class="call-timer d-none">
+                    <i class="fas fa-clock me-1"></i><span>00:00</span>
+                </div>
+
+                <!-- Main Control Buttons -->
+                <div class="text-center mt-4">
+                    <button id="startCall" class="btn btn-primary btn-lg me-2" disabled>
+                        <i class="fas fa-phone me-2"></i>Bắt Đầu Cuộc Gọi
+                    </button>
+                    <button id="endCall" class="btn btn-danger btn-lg" disabled>
+                        <i class="fas fa-phone-slash me-2"></i>Kết Thúc
+                    </button>
+                </div>
+
+                <!-- Media Control Buttons -->
+                <div id="mediaControls" class="text-center mt-3 d-none">
+                    <div class="btn-group" role="group">
+                        <button id="toggleVideo" class="btn btn-outline-primary">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button id="toggleAudio" class="btn btn-outline-primary">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="btn btn-outline-info" onclick="initMedia()" title="Kiểm tra lại camera">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Online Users Card -->
+        <div class="card mt-4 fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Người Dùng Online
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="onlineUsers">
+                    {% for user in users %}
+                    <div class="user-item fade-in">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ user.username[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ user.username }}</div>
+                                <small class="text-success">
+                                    <i class="fas fa-circle me-1"></i>Online
+                                </small>
+                            </div>
+                            <div class="user-status online"></div>
+                        </div>
+                        <button class="btn btn-primary btn-sm call-btn" 
+                                data-user-id="{{ user.id }}" 
+                                data-username="{{ user.username }}"
+                                title="Gọi cho {{ user.username }}">
+                            <i class="fas fa-phone me-1"></i>Gọi
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if not users %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Không có người dùng nào online</p>
+                    <small class="text-muted">Mời người khác đăng nhập để bắt đầu cuộc gọi</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Room Information Card -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Thông Tin Phòng
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="room-info">
+                    <div class="mb-3">
+                        <small class="text-muted">Phòng hiện tại</small>
+                        <div class="fw-bold text-primary" id="currentRoom">Chưa tham gia</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Số người trong phòng</small>
+                        <div class="fw-bold" id="roomUsers">0</div>
+                    </div>
+                    <div>
+                        <small class="text-muted">Trạng thái kết nối</small>
+                        <div>
+                            <span class="badge bg-secondary" id="callStatus">Chưa kết nối</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card mt-4 fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Hành Động Nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>Lịch Sử Cuộc Gọi
+                    </a>
+                    {% if session.is_admin %}
+                    <a href="{{ url_for('admin') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-cog me-2"></i>Quản Trị Hệ Thống
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-outline-info" onclick="initMedia()">
+                        <i class="fas fa-camera me-2"></i>Kiểm Tra Camera
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status Card -->
+        <div class="card mt-4 fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>Trạng Thái Hệ Thống
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="callAlert" class="alert alert-info m-3 d-none"></div>
+                <div class="p-3">
+                    <div class="system-status">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Camera:</span>
+                            <span class="badge bg-success" id="cameraStatus">Đã kết nối</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Microphone:</span>
+                            <span class="badge bg-success" id="microStatus">Đã kết nối</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>WebRTC:</span>
+                            <span class="badge bg-success" id="webrtcStatus">Sẵn sàng</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Kết nối Server:</span>
+                            <span class="badge bg-success" id="serverStatus">Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card mt-4 fade-in">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>Trợ Giúp Nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help1">
+                                <i class="fas fa-phone me-2"></i>Cách thực hiện cuộc gọi
+                            </button>
+                        </h2>
+                        <div id="help1" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Nhấn <strong>"Bắt Đầu Cuộc Gọi"</strong> để tạo phòng hoặc nhấn nút <strong>"Gọi"</strong> bên cạnh người dùng bạn muốn gọi.</p>
+                                <p class="mb-0">Khi có cuộc gọi đến, bạn có 30 giây để chấp nhận hoặc từ chối.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help2">
+                                <i class="fas fa-cog me-2"></i>Điều khiển camera/micro
+                            </button>
+                        </h2>
+                        <div id="help2" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p>Sử dụng nút <i class="fas fa-video"></i> để <strong>bật/tắt camera</strong> và nút <i class="fas fa-microphone"></i> để <strong>bật/tắt micro</strong>.</p>
+                                <p class="mb-0">Các nút này chỉ xuất hiện khi bạn đang trong cuộc gọi.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Khắc phục sự cố
+                            </button>
+                        </h2>
+                        <div id="help3" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <p><strong>Camera không hoạt động:</strong> Nhấn "Kiểm Tra Camera" hoặc cho phép quyền truy cập camera trong trình duyệt.</p>
+                                <p><strong>Không nghe thấy âm thanh:</strong> Kiểm tra micro và âm lượng thiết bị.</p>
+                                <p class="mb-0"><strong>Kết nối kém:</strong> Đảm bảo kết nối internet ổn định.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Media Controls Container -->
+<div id="mediaControls" class="d-none">
+    <div class="control-buttons">
+        <button id="toggleVideo" class="control-btn btn-toggle-video" title="Bật/Tắt Camera">
+            <i class="fas fa-video"></i>
+        </button>
+        <button id="toggleAudio" class="control-btn btn-toggle-audio" title="Bật/Tắt Micro">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <button id="endCall" class="control-btn btn-end-call" title="Kết Thúc Cuộc Gọi">
+            <i class="fas fa-phone-slash"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update online users count
+    document.addEventListener('DOMContentLoaded', function() {
+        const userCount = {{ users|length }};
+        document.getElementById('onlineCount').textContent = userCount + 1;
+        
+        // Add fade-in animation to new elements
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        node.classList.add('fade-in');
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.getElementById('onlineUsers'), {
+            childList: true,
+            subtree: true
+        });
+    });
+    
+    // Update server status based on socket connection
+    socket.on('connect', function() {
+        document.getElementById('serverStatus').textContent = 'Online';
+        document.getElementById('serverStatus').className = 'badge bg-success';
+    });
+    
+    socket.on('disconnect', function() {
+        document.getElementById('serverStatus').textContent = 'Offline';
+        document.getElementById('serverStatus').className = 'badge bg-danger';
+    });
+</script>
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    .btn, .card, .user-item, .control-btn {
+        transition: all 0.3s ease;
+    }
+    
+    /* Hover effects */
+    .user-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Responsive video containers */
+    @media (max-width: 768px) {
+        .video-container {
+            min-height: 200px;
+        }
+        
+        .btn-lg {
+            padding: 10px 20px;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
